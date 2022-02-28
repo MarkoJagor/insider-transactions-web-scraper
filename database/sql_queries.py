@@ -14,3 +14,10 @@ def insert_new_transaction():
 
 def get_most_recent_published_date():
     return "SELECT MAX(transactions.transaction.published_date) FROM transactions.transaction"
+
+
+def get_issuer_related_emails():
+    return "SELECT transactions.account.username FROM transactions.account " \
+           "WHERE transactions.account.account_id IN (SELECT transactions.account_issuer.account_id FROM account_issuer " \
+           "WHERE transactions.account_issuer.issuer_id = (SELECT transactions.issuer.issuer_id FROM transactions.issuer " \
+           "WHERE transactions.issuer.name LIKE %s))"

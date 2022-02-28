@@ -6,6 +6,7 @@ from MySQLdb import Error
 from bs4 import BeautifulSoup
 
 from database.sql_queries import get_most_recent_published_date, get_transaction, insert_new_transaction
+from emailconfig.email_sender import send_email_to_subscribers
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,8 @@ def scrape_transaction_data(cursor, db):
                 sql = insert_new_transaction()
                 cursor.execute(sql, values)
                 db.commit()
+
+                send_email_to_subscribers(cursor, values)
 
                 new_transactions.append(values)
                 logger.info("Inserted new transaction - trade date: %s, published date: %s, investor: %s, investor_position: %s, issuer: %s,"
