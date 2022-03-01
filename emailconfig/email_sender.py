@@ -10,32 +10,11 @@ logger = logging.getLogger(__name__)
 
 EMAIL_ADDRESS = 'insidertehingud@gmail.com'
 EMAIL_PASSWORD = os.environ.get('INSIDER_TRANSACTIONS_EMAIL_PW')
-MAIN_LIST_ISSUERS = ["Arco", "Baltika", "Coop", "Ekspress", "EfTEN", "Enefit", "Harju", "Hepsor",
-                     "LHV", "Merko", "Nordecon", "Pro Kapital", "PRFoods", "Silvano", "Tallink",
-                     "Kaubamaja", "Sadam", "Vesi"]
-SECONDARY_LIST_ISSUERS = ["Horizon", "Fibreboard", "Trigon"]
-FIRST_NORTH_ISSUERS = ["Airobot", "Bercman", "Japan", "ELMO", "Hagen", "Linda", "TextMagic", "Modera", "Saunum"]
 
 
-def send_email_to_subscribers(cursor, transaction_details):
+def send_email_to_subscribers(cursor, transaction_details, issuer):
     try:
-        for issuer in MAIN_LIST_ISSUERS:
-            if issuer in transaction_details[4]:
-                set_email_settings(cursor, issuer, transaction_details)
-                return
-
-        for issuer in SECONDARY_LIST_ISSUERS:
-            if issuer in transaction_details[4]:
-                set_email_settings(cursor, issuer, transaction_details)
-                return
-
-        for issuer in FIRST_NORTH_ISSUERS:
-            if issuer in transaction_details[4]:
-                set_email_settings(cursor, issuer, transaction_details)
-                return
-
-        logger.info("Issuer was not found from specified issuer lists")
-
+        set_email_settings(cursor, issuer, transaction_details)
     except smtplib.SMTPException as err:
         logger.exception("Error occurred while trying to send email: " + repr(err))
     except Exception as err:
@@ -44,7 +23,7 @@ def send_email_to_subscribers(cursor, transaction_details):
 
 def set_email_settings(cursor, issuer, transaction_details):
     sql = get_issuer_related_emails()
-    values = ['%' + issuer + '%']
+    values = [issuer]
     cursor.execute(sql, values)
     emails = [item[0] for item in cursor.fetchall()]
 

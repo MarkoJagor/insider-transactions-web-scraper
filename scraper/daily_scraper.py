@@ -5,7 +5,7 @@ import requests
 from MySQLdb import Error
 from bs4 import BeautifulSoup
 
-from database.sql_queries import get_most_recent_published_date, get_transaction, insert_new_transaction
+from database.sql_queries import get_most_recent_published_date, get_transaction, insert_new_transaction, get_issuer_names_shortened, get_issuer_name_like_issuer_name_shortened
 from emailconfig.email_sender import send_email_to_subscribers
 
 logger = logging.getLogger(__name__)
@@ -50,20 +50,40 @@ def scrape_transaction_data(cursor, db):
             if published_date < max_published_date:
                 continue
 
-            trade_date_string = cells[0].text.strip()[0:10]
+            # Get shortened issuer names and add them to list
+            sql = get_issuer_names_shortened()
+            cursor.execute(sql)
+            issuer_names_shortened = [item[0] for item in cursor.fetchall()]
+
             issuer_string = cells[1].text.strip()
+            issuer = None
+
+            # Check if scraped issuer belongs to database
+            for issuer_shortened in issuer_names_shortened:
+                if issuer_shortened in issuer_string:
+                    sql = get_issuer_name_like_issuer_name_shortened()
+                    values = ['%' + issuer_shortened + '%']
+                    cursor.execute(sql, values)
+                    issuer = cursor.fetchone()[0]
+                    break
+
+            if issuer is None:
+                logger.info("Issuer with name " + issuer_string + " does not belong to list of issuers specified in the database")
+                continue
+
+            trade_date_string = cells[0].text.strip()[0:10]
             investor_string = cells[2].text.strip()
             volume_string = cells[3].text.strip()
             price_string = cells[4].text.strip()
 
-            values = (trade_date_string, published_string, issuer_string, investor_string, volume_string, price_string)
+            values = (trade_date_string, published_string, issuer, investor_string, volume_string, price_string)
             sql = get_transaction()
             cursor.execute(sql, values)
             transaction = cursor.fetchall()
 
             if not transaction:
                 transaction_details = scrape_transaction_details(cells)
-                values = (trade_date_string, published_string, investor_string, transaction_details["investor_position"], issuer_string,
+                values = (trade_date_string, published_string, investor_string, transaction_details["investor_position"], issuer,
                           transaction_details["instrument"], transaction_details["transaction_type"], volume_string, price_string,
                           transaction_details["market"], transaction_details["has_been_updated"], transaction_details["update_reason"])
 
@@ -71,7 +91,7 @@ def scrape_transaction_data(cursor, db):
                 cursor.execute(sql, values)
                 db.commit()
 
-                send_email_to_subscribers(cursor, values)
+                send_email_to_subscribers(cursor, values, issuer)
 
                 new_transactions.append(values)
                 logger.info("Inserted new transaction - trade date: %s, published date: %s, investor: %s, investor_position: %s, issuer: %s,"

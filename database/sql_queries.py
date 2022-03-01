@@ -20,4 +20,13 @@ def get_issuer_related_emails():
     return "SELECT transactions.account.username FROM transactions.account " \
            "WHERE transactions.account.account_id IN (SELECT transactions.account_issuer.account_id FROM account_issuer " \
            "WHERE transactions.account_issuer.issuer_id = (SELECT transactions.issuer.issuer_id FROM transactions.issuer " \
-           "WHERE transactions.issuer.name LIKE %s))"
+           "WHERE transactions.issuer.name = %s))"
+
+
+def get_issuer_names_shortened():
+    return "SELECT transactions.issuer_shortened.name_shortened FROM transactions.issuer_shortened"
+
+
+def get_issuer_name_like_issuer_name_shortened():
+    return "SELECT transactions.issuer.name FROM transactions.issuer " \
+           "WHERE transactions.issuer.name LIKE %s"
