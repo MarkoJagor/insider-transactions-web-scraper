@@ -42,6 +42,7 @@ def scrape_transaction_data(cursor, db):
 
         new_transactions = []
 
+        # Loop over transactions table, starting from oldest transactions first
         for row in reversed(transactions_table_newest_first.find_all("tr")[1:]):
             cells = row.find_all("td")
             published_string = cells[5].text.strip()[0:10]
@@ -71,26 +72,31 @@ def scrape_transaction_data(cursor, db):
                 logger.info("Issuer with name " + issuer_string + " does not belong to list of issuers specified in the database")
                 continue
 
+            # Collect other data related to transaction
             trade_date_string = cells[0].text.strip()[0:10]
             investor_string = cells[2].text.strip()
             volume_string = cells[3].text.strip()
             price_string = cells[4].text.strip()
 
+            # Check if transaction is already added to database to avoid duplicates
             values = (trade_date_string, published_string, issuer, investor_string, volume_string, price_string)
             sql = get_transaction()
             cursor.execute(sql, values)
             transaction = cursor.fetchall()
 
             if not transaction:
+                # Collect transaction details
                 transaction_details = scrape_transaction_details(cells)
                 values = (trade_date_string, published_string, investor_string, transaction_details["investor_position"], issuer,
                           transaction_details["instrument"], transaction_details["transaction_type"], volume_string, price_string,
                           transaction_details["market"], transaction_details["has_been_updated"], transaction_details["update_reason"])
 
+                # Insert collected values to database
                 sql = insert_new_transaction()
                 cursor.execute(sql, values)
                 db.commit()
 
+                # Send data of transaction to emails that have subscribed to the insiders' activities of specific issuer
                 send_email_to_subscribers(cursor, values, issuer)
 
                 new_transactions.append(values)

@@ -22,12 +22,14 @@ def send_email_to_subscribers(cursor, transaction_details, issuer):
 
 
 def set_email_settings(cursor, issuer, transaction_details):
+    # Get emails that have subscribed to issuer
     sql = get_issuer_related_emails()
     values = [issuer]
     cursor.execute(sql, values)
     emails = [item[0] for item in cursor.fetchall()]
 
     if emails:
+        # Configure email settings
         smtp = smtplib.SMTP('smtp.gmail.com', 587)
         smtp.starttls()
         smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
@@ -37,6 +39,7 @@ def set_email_settings(cursor, issuer, transaction_details):
         msg['From'] = EMAIL_ADDRESS
         msg['To'] = ', '.join(emails)
 
+        # Attach html content to email
         msg.attach(MIMEText(create_email_content(transaction_details), 'html'))
 
         smtp.send_message(msg)

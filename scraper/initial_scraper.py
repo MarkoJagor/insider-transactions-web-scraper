@@ -56,6 +56,7 @@ def scrape_transaction_data():
             published_string = cells[5].text.strip()[0:10]
             published_string_with_time = cells[5].text.strip()
 
+            # Break loop on specific transaction
             if trade_date_string == '2018-11-13' and published_string == '2018-11-13' and issuer_string == 'AS Tallink Grupp':
                 j = False
                 break
