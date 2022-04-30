@@ -23,6 +23,11 @@ def get_issuer_related_emails():
            "WHERE transactions.issuer.name = %s))"
 
 
+def get_market_beater_emails():
+    return "SELECT transactions.account.username FROM transactions.account " \
+           "WHERE transactions.account.alpha_returns = true"
+
+
 def get_issuer_names_shortened():
     return "SELECT transactions.issuer_shortened.name_shortened FROM transactions.issuer_shortened"
 

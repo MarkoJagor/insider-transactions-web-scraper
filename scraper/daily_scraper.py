@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime as dt
 
+import numpy as np
 import requests
 from MySQLdb import Error
 from bs4 import BeautifulSoup
@@ -96,8 +97,11 @@ def scrape_transaction_data(cursor, db):
                 cursor.execute(sql, values)
                 db.commit()
 
+                # Check if transaction has potential to beat the market
+                is_potential_market_beater, days_to_published = is_transaction_potential_market_beater(transaction_details, trade_date_string, published_date)
+
                 # Send data of transaction to emails that have subscribed to the insiders' activities of specific issuer
-                send_email_to_subscribers(cursor, values, issuer)
+                send_email_to_subscribers(cursor, values, issuer, is_potential_market_beater, days_to_published)
 
                 new_transactions.append(values)
                 logger.info("Inserted new transaction - trade date: %s, published date: %s, investor: %s, investor_position: %s, issuer: %s,"
@@ -153,3 +157,16 @@ def scrape_transaction_details(cells):
             break
 
     return transaction_details_dictionary
+
+
+def is_transaction_potential_market_beater(transaction_details, trade_date, published_date):
+    is_potential_market_beater = False
+    days_to_published = None
+
+    if (transaction_details["market"] == "Nasdaq Tallinn AS, XTAL" or transaction_details["market"] == "First North Estonia, XTAL") and \
+            transaction_details["transaction_type"] == "Ost" or transaction_details["transaction_type"] == "Omandamine":
+        days_to_published = np.busday_count(trade_date, published_date)
+        if days_to_published < 5:
+            is_potential_market_beater = True
+
+    return is_potential_market_beater, days_to_published
